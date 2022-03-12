@@ -61,19 +61,6 @@ struct scallop_ast_node {
 };
 
 /**
- * This structure represents the structure passed
- * as the second argument to your callback in
- * scallop_parse(). The \c source parameter always
- * represents the original store containing the human-readable
- * source to be parsed. The \c param parameter
- * contains the third parameter of scallop_parse().
- */
-struct scallop_parse_parameter {
-	csalt_store *source;
-	void *param;
-};
-
-/**
  * This function takes a human-readable Scallop
  * string, stored in source, and parses it into
  * an AST. The AST is stored as a simple, flat
