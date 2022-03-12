@@ -62,6 +62,36 @@ const struct scallop_ast_node expected_node_list[] = {
 	{ SCALLOP_TOKEN_CLOSING_BRACE, 71, 72 },
 	{ SCALLOP_TOKEN_WORD_SEPARATOR, 72, 73 },
 	{ SCALLOP_TOKEN_BINARY_PIPE, 73, 75 },
+	{ SCALLOP_TOKEN_WORD_SEPARATOR, 75, 76 },
+	{ SCALLOP_TOKEN_OPENING_BRACE, 76, 77 },
+	{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 77, 78 },
+	{ SCALLOP_TOKEN_WORD_SEPARATOR, 78, 80 },
+	{ SCALLOP_TOKEN_WORD, 80, 88 }, // 80 + sizeof("simulate") - 1
+	{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 88, 89 },
+	{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 89, 90 },
+	{ SCALLOP_TOKEN_WORD_SEPARATOR, 90, 91 },
+	{ SCALLOP_TOKEN_CLOSING_BRACE, 91, 92 },
+	{ SCALLOP_TOKEN_WORD_SEPARATOR, 92, 93 },
+	{ SCALLOP_TOKEN_BINARY_PIPE, 93, 95 },
+	{ SCALLOP_TOKEN_WORD_SEPARATOR, 95, 96 },
+	{ SCALLOP_TOKEN_OPENING_BRACE, 96, 97 },
+	{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 97, 98 },
+	{ SCALLOP_TOKEN_WORD_SEPARATOR, 98, 100 },
+	{ SCALLOP_TOKEN_WORD, 100, 116 }, // 100 + sizeof("render_to_screen") - 1
+	{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 116, 117 },
+	{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 117, 118 },
+	{ SCALLOP_TOKEN_WORD_SEPARATOR, 118, 120 },
+	{ SCALLOP_TOKEN_WORD, 120, 135 }, // 120 + sizeof("render_to_audio") -1
+	{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 135, 136 },
+	{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 136, 137 },
+	{ SCALLOP_TOKEN_WORD_SEPARATOR, 137, 139 },
+	{ SCALLOP_TOKEN_WORD, 139, 156 }, // 139 + sizeof("render_to_network") -1
+	{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 156, 157 },
+	{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 157, 158 },
+	{ SCALLOP_TOKEN_WORD_SEPARATOR, 158, 159 },
+	{ SCALLOP_TOKEN_CLOSING_BRACE, 159, 160 },
+	{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 160, 161 },
+	{ SCALLOP_TOKEN_CLOSING_BRACE, 161, 162 },
 };
 
 const char *token_types[] = {
@@ -93,7 +123,8 @@ int run_first_test(csalt_store *result, void *string_ptr)
 
 		if (node.token != current_expected->token) {
 			print_error(
-				"Unexpected token type, expected: %s | actual: %s",
+				"Unexpected token type at character %d, expected: %s | actual: %s",
+				node.start_offset,
 				token_types[current_expected->token],
 				token_types[node.token]
 			);
@@ -123,7 +154,7 @@ int run_first_test(csalt_store *result, void *string_ptr)
 int main()
 {
 	{
-		const struct csalt_memory csalt_string = csalt_store_memory_array(sample_script);
+		struct csalt_cmemory csalt_string = csalt_cmemory_array(sample_script);
 
 		int error = scallop_parse((csalt_store *)&csalt_string, run_first_test, &csalt_string);
 		if (error)
