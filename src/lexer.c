@@ -375,7 +375,7 @@ static int lex_into_vector(csalt_store *store, void *param)
 	return wrapped_param->block(store, wrapped_param->param);
 }
 
-int scallop_parse(
+int scallop_lex(
 	csalt_store *source,
 	csalt_store_block_fn *block,
 	void *param

@@ -43,7 +43,7 @@ enum SCALLOP_TOKEN {
  * of the original value from the source.
  *
  * Do not pass read-once stores - such as stdin
- * or network-sockets - to scallop_parse(), as
+ * or network-sockets - to scallop_lex(), as
  * the AST does not store raw data values. If
  * you want to be able to parse read-once stores,
  * you should use csalt_store_fallback with a
@@ -67,13 +67,13 @@ struct scallop_ast_node {
  * list; convenience functions are provided for
  * traversing the tree.
  *
- * Do not pass read-once stores to scallop_parse().
+ * Do not pass read-once stores to scallop_lex().
  * The returned AST includes indices back into
  * the original string to allow value parsing.
  *
  * \sa scallop_parse_parameter
  */
-int scallop_parse(
+int scallop_lex(
 	csalt_store *source,
 	csalt_store_block_fn *callback,
 	void *param

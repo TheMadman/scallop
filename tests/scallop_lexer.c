@@ -156,8 +156,10 @@ int main()
 	{
 		struct csalt_cmemory csalt_string = csalt_cmemory_array(sample_script);
 
-		int error = scallop_parse((csalt_store *)&csalt_string, run_first_test, &csalt_string);
-		if (error)
+		int error = scallop_lex((csalt_store *)&csalt_string, run_first_test, &csalt_string);
+		if (error) {
+			print_error("Error parsing valid script");
 			return error;
+		}
 	}
 }
