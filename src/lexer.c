@@ -38,7 +38,7 @@ static char get_char(csalt_store *store, ssize_t index)
 
 enum CHAR_TYPE {
 	CHAR_NULL,
-	CHAR_ALPHANUMERIC,
+	CHAR_ASCII_PRINTABLE,
 	CHAR_UTF8_START,
 	CHAR_UTF8_CONT,
 	CHAR_OPEN_BRACE,
@@ -80,14 +80,10 @@ static enum CHAR_TYPE char_type(char character)
 			return CHAR_NULL;
 	}
 
-	int is_number = '0' <= character && character <= '9';
-	int is_lowercase = 'a' <= character && character <= 'z';
-	int is_uppercase = 'A' <= character && character <= 'Z';
+	if (' ' <= character && character <= '~')
+		return CHAR_ASCII_PRINTABLE;
 
-	if (is_number || is_lowercase || is_uppercase)
-		return CHAR_ALPHANUMERIC;
-
-	char utf8_bits = UTF8_FIRST_BIT | UTF8_SECOND_BIT;
+	unsigned char utf8_bits = UTF8_FIRST_BIT | UTF8_SECOND_BIT;
 	switch (character & utf8_bits) {
 		// UTF-8 continuation character
 		case UTF8_FIRST_BIT:
@@ -166,6 +162,8 @@ static ssize_t consume_word(csalt_store *string, ssize_t begin)
 			case CHAR_WORD_SEPARATOR:
 			case CHAR_NULL:
 				return begin;
+			default:
+				break;
 		}
 	}
 
@@ -280,7 +278,7 @@ static struct scallop_ast_node chars_to_token(csalt_store *string, ssize_t begin
 				consume_word(string, begin)
 			};
 			break;
-		case CHAR_ALPHANUMERIC:
+		case CHAR_ASCII_PRINTABLE:
 		case CHAR_UTF8_START:
 		case CHAR_BACKSLASH:
 			result = (struct scallop_ast_node) {
@@ -308,6 +306,8 @@ static struct scallop_ast_node chars_to_token(csalt_store *string, ssize_t begin
 			break;
 		case CHAR_UNKNOWN:
 			result.end_offset = -1;
+			break;
+		default:
 			break;
 	}
 	return result;
@@ -339,7 +339,7 @@ static ssize_t write_node_into_vector(
 		&node,
 		-1,
 	};
-	int result = csalt_store_split(
+	csalt_store_split(
 		store,
 		begin_byte,
 		end_byte,
