@@ -41,8 +41,10 @@ enum CHAR_TYPE {
 	CHAR_ASCII_PRINTABLE,
 	CHAR_UTF8_START,
 	CHAR_UTF8_CONT,
-	CHAR_OPEN_BRACE,
-	CHAR_CLOSE_BRACE,
+	CHAR_OPEN_CURLY_BRACKET,
+	CHAR_CLOSE_CURLY_BRACKET,
+	CHAR_OPEN_SQUARE_BRACKET,
+	CHAR_CLOSE_SQUARE_BRACKET,
 	CHAR_QUOTE,
 	CHAR_DOUBLE_QUOTE,
 	CHAR_BACKSLASH,
@@ -59,9 +61,13 @@ static enum CHAR_TYPE char_type(char character)
 {
 	switch (character) {
 		case '{':
-			return CHAR_OPEN_BRACE;
+			return CHAR_OPEN_CURLY_BRACKET;
 		case '}':
-			return CHAR_CLOSE_BRACE;
+			return CHAR_CLOSE_CURLY_BRACKET;
+		case '[':
+			return CHAR_OPEN_SQUARE_BRACKET;
+		case ']':
+			return CHAR_CLOSE_SQUARE_BRACKET;
 		case '\'':
 			return CHAR_QUOTE;
 		case '"':
@@ -182,12 +188,15 @@ static ssize_t consume_string_literal(csalt_store *string, ssize_t begin, char t
 	) {
 		enum CHAR_TYPE current_char_type = char_type(current);
 		if (current_char_type == terminator_type)
-			return begin;
+			return ++begin;
 
 		switch (current_char_type) {
 			case CHAR_BACKSLASH:
 				// skip escaped character
 				++begin;
+				break;
+			case CHAR_UTF8_START:
+				begin = consume_utf8_chars(string, begin) - 1;
 				break;
 			case CHAR_NULL:
 			case CHAR_UNKNOWN:
@@ -250,16 +259,30 @@ static struct scallop_ast_node chars_to_token(csalt_store *string, ssize_t begin
 	struct scallop_ast_node result = { 0 };
 	char current_char = get_char(string, begin);
 	switch (char_type(current_char)) {
-		case CHAR_OPEN_BRACE:
+		case CHAR_OPEN_CURLY_BRACKET:
 			result = (struct scallop_ast_node) {
-				SCALLOP_TOKEN_OPENING_BRACE,
+				SCALLOP_TOKEN_OPENING_CURLY_BRACKET,
 				begin,
 				begin + 1
 			};
 			break;
-		case CHAR_CLOSE_BRACE:
+		case CHAR_CLOSE_CURLY_BRACKET:
 			result = (struct scallop_ast_node) {
-				SCALLOP_TOKEN_CLOSING_BRACE,
+				SCALLOP_TOKEN_CLOSING_CURLY_BRACKET,
+				begin,
+				begin + 1
+			};
+			break;
+		case CHAR_OPEN_SQUARE_BRACKET:
+			result = (struct scallop_ast_node) {
+				SCALLOP_TOKEN_OPENING_SQUARE_BRACKET,
+				begin,
+				begin + 1
+			};
+			break;
+		case CHAR_CLOSE_SQUARE_BRACKET:
+			result = (struct scallop_ast_node) {
+				SCALLOP_TOKEN_CLOSING_SQUARE_BRACKET,
 				begin,
 				begin + 1
 			};
