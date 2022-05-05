@@ -26,6 +26,7 @@ extern "C" {
 #endif
 
 enum SCALLOP_TOKEN {
+	SCALLOP_TOKEN_EOF,
 	SCALLOP_TOKEN_WORD,
 	SCALLOP_TOKEN_WORD_SEPARATOR,
 	SCALLOP_TOKEN_STATEMENT_SEPARATOR,
@@ -39,14 +40,15 @@ enum SCALLOP_TOKEN {
 };
 
 /**
- * Represents a single node in the AST tree.
+ * \brief Represents a single token.
+ *
  * The start_offset and end_offset are offsets
  * into the original string, allowing fetching
  * of the original value from the source.
  *
  * Do not pass read-once stores - such as stdin
  * or network-sockets - to scallop_lex(), as
- * the AST does not store raw data values. If
+ * the token does not store raw data values. If
  * you want to be able to parse read-once stores,
  * you should use csalt_store_fallback with a
  * store that can persist the original source,
@@ -56,28 +58,44 @@ enum SCALLOP_TOKEN {
  * end_offset to read out the raw values from the
  * original store.
  */
-struct scallop_ast_node {
+struct scallop_parse_token {
 	int32_t token;
-	int32_t start_offset;
-	int32_t end_offset;
+	int64_t start_offset;
+	int64_t end_offset;
+	int64_t row;
+	int64_t col;
 };
 
+typedef void void_fn(void);
+
 /**
- * This function takes a human-readable Scallop
- * string, stored in source, and parses it into
- * an AST. The AST is stored as a simple, flat
- * list; convenience functions are provided for
- * traversing the tree.
+ * \brief This type represents a parse function.
  *
- * Do not pass read-once stores to scallop_lex().
- * The returned AST includes indices back into
- * the original string to allow value parsing.
+ * it takes a single scallop_parse_token and an arbitrary
+ * void pointer and returns a pointer to the next parse
+ * function, or a null pointer if there was an error.
  *
- * \sa scallop_parse_parameter
+ * Note that you should cast your return value to this
+ * type to avoid warnings.
+ */
+typedef void_fn *scallop_parse_fn(
+	csalt_store *,
+	struct scallop_parse_token,
+	void *
+);
+
+/**
+ * \brief Lexes UTF-8 text in source into tokens, one at
+ * 	a time, and passed to parse functions, the first
+ * 	of which is passed as first_parse_functions.
+ *
+ * first_parse_function will take the first token and
+ * should return a pointer to the function expecting the next token,
+ * or a null pointer if the first token was invalid.
  */
 int scallop_lex(
 	csalt_store *source,
-	csalt_store_block_fn *callback,
+	scallop_parse_fn *first_parse_function,
 	void *param
 );
 

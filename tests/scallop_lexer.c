@@ -15,13 +15,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "lexer.h"
+#include "scallop/lexer.h"
 
 #include <csalt/stores.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 
-#include "scallop_util.h"
+#include "scallop/scallop_util.h"
 
 #define print_error(format, ...) fprintf(stderr, "%s:%d: " format "\n", __FILE__, __LINE__ __VA_OPT__(,) __VA_ARGS__)
 
@@ -38,116 +39,268 @@ const char *token_types[] = {
 	"SCALLOP_TOKEN_BINARY_PIPE",
 };
 
-int run_first_test(csalt_store *result, void *string_ptr)
+void_fn *dummy_next(csalt_store *_, struct scallop_parse_token __, void *___)
 {
-	const struct scallop_ast_node expected_node_list[] = {
-		{ SCALLOP_TOKEN_WORD, 0, 5 },
-		{ SCALLOP_TOKEN_WORD_SEPARATOR, 5, 6 },
-		{ SCALLOP_TOKEN_WORD, 6, 18 },
-		{ SCALLOP_TOKEN_WORD_SEPARATOR, 18, 19 },
-		{ SCALLOP_TOKEN_WORD, 19, 29 },
-		{ SCALLOP_TOKEN_WORD_SEPARATOR, 29, 30 },
-		{ SCALLOP_TOKEN_OPENING_SQUARE_BRACKET, 30, 31 },
-		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 31, 32 },
-		{ SCALLOP_TOKEN_WORD_SEPARATOR, 32, 33 },
-		{ SCALLOP_TOKEN_WORD, 33, 39 },
-		{ SCALLOP_TOKEN_WORD_SEPARATOR, 39, 40 },
-		{ SCALLOP_TOKEN_WORD, 40, 58 },
-		{ SCALLOP_TOKEN_WORD_SEPARATOR, 58, 59 },
-		{ SCALLOP_TOKEN_OPENING_SQUARE_BRACKET, 59, 60 },
-		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 60, 61 },
-		{ SCALLOP_TOKEN_WORD_SEPARATOR, 61, 63 },
-		{ SCALLOP_TOKEN_WORD, 63, 71 },
-		{ SCALLOP_TOKEN_WORD_SEPARATOR, 71, 72 },
-		{ SCALLOP_TOKEN_WORD, 72, 82 },
-		{ SCALLOP_TOKEN_WORD_SEPARATOR, 82, 83 },
-		{ SCALLOP_TOKEN_OPENING_CURLY_BRACKET, 83, 84 },
-		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 84, 85 },
-		{ SCALLOP_TOKEN_WORD_SEPARATOR, 85, 88 },
-		{ SCALLOP_TOKEN_WORD, 88, 98 },
-		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 98, 99 },
-		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 99, 100 },
-		{ SCALLOP_TOKEN_WORD_SEPARATOR, 100, 103 },
-		{ SCALLOP_TOKEN_WORD, 103, 106 },
-		{ SCALLOP_TOKEN_WORD_SEPARATOR, 106, 107 },
-		{ SCALLOP_TOKEN_WORD, 107, 116 },
-		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 116, 117 },
-		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 117, 118 },
-		{ SCALLOP_TOKEN_WORD_SEPARATOR, 118, 120 },
-		{ SCALLOP_TOKEN_CLOSING_CURLY_BRACKET, 120, 121 },
-		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 121, 122 },
-		{ SCALLOP_TOKEN_WORD_SEPARATOR, 122, 123 },
-		{ SCALLOP_TOKEN_CLOSING_SQUARE_BRACKET, 123, 124 },
-		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 124, 125 },
-		{ SCALLOP_TOKEN_CLOSING_SQUARE_BRACKET, 125, 126 },
-		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 126, 127 },
-	};
+	(void)_;
+	(void)__;
+	(void)___;
+	return 0;
+}
 
-	struct csalt_memory *string = string_ptr;
-	struct scallop_ast_node node = { 0 };
+int test_word_result_called = 0;
 
-	int index = 0;
-	for (
-		const struct scallop_ast_node
-			*current_expected = expected_node_list,
-			*end_expected = arrend(expected_node_list);
-		current_expected < end_expected;
-		++current_expected, ++index
-	) {
-		if (!store_get_element(result, &node, index, sizeof(node))) {
-			print_error("Failed to get node at index %d", index);
-			return EXIT_FAILURE;
-		}
+void_fn *test_word_result(
+	csalt_store *source,
+	struct scallop_parse_token token,
+	void *param
+)
+{
+	(void)param;
+	test_word_result_called = 1;
+	char test_word_token_is_right = token.token == SCALLOP_TOKEN_WORD;
+	char test_word_bounds_are_right = token.start_offset == 0 &&
+		token.end_offset == 7;
+	assert(test_word_token_is_right);
+	assert(test_word_bounds_are_right);
+	return (void_fn *)dummy_next;
+}
 
-		if (node.token != current_expected->token) {
-			print_error(
-				"Unexpected token type at character %d, expected: %s | actual: %s",
-				node.start_offset,
-				token_types[current_expected->token],
-				token_types[node.token]
-			);
-			return EXIT_FAILURE;
-		}
+int test_word()
+{
+	const char script[] = "w💩rd";
+	struct csalt_cmemory csalt_script = csalt_cmemory_array(script);
+	int lex_result = scallop_lex(
+		(csalt_store *)&csalt_script,
+		test_word_result,
+		0
+	);
+	assert(lex_result == 0);
+	assert(test_word_result_called);
+	return 0;
+}
 
-		int position_correct =
-			node.start_offset == current_expected->start_offset &&
-			node.end_offset == current_expected->end_offset;
+int test_word_separator_result_called = 0;
 
-		if (!position_correct) {
-			print_error(
-				"Unexpected offsets, expected: %d->%d | actual: %d->%d",
-				current_expected->start_offset,
-				current_expected->end_offset,
-				node.start_offset,
-				node.end_offset
-			);
-			return EXIT_FAILURE;
-		}
+void_fn *test_word_separator_result(
+	csalt_store *source,
+	struct scallop_parse_token token,
+	void *param
+)
+{
+	(void)param;
+	test_word_separator_result_called = 1;
+	char test_word_separator_token_is_right =
+		token.token == SCALLOP_TOKEN_WORD_SEPARATOR;
+	char test_word_separator_bounds_are_right =
+		token.start_offset == 0 &&
+		token.end_offset == 2;
+	assert(test_word_separator_token_is_right);
+	assert(test_word_separator_bounds_are_right);
+	return (void_fn *)dummy_next;
+}
+
+int test_word_separator()
+{
+	const char script[] = " \t";
+	struct csalt_cmemory csalt_script = csalt_cmemory_array(script);
+	int lex_result = scallop_lex(
+		(csalt_store *)&csalt_script,
+		test_word_separator_result,
+		0
+	);
+	assert(lex_result == 0);
+	assert(test_word_separator_result_called);
+	return 0;
+}
+
+int lex_short_phrase_result_called = 0;
+
+void_fn *test_short_phrase_result(
+	csalt_store *source,
+	struct scallop_parse_token token,
+	void *param
+)
+{
+	(void)param;
+	lex_short_phrase_result_called++;
+	static int token_number = 0;
+	struct scallop_parse_token expected = { 0 };
+	switch (token_number++) {
+		case 0:
+			expected.token = SCALLOP_TOKEN_WORD;
+			expected.start_offset = 0;
+			expected.end_offset = 3;
+			break;
+		case 1:
+			expected.token = SCALLOP_TOKEN_WORD_SEPARATOR;
+			expected.start_offset = 3;
+			expected.end_offset = 4;
+			break;
+		case 2:
+			expected.token = SCALLOP_TOKEN_WORD;
+			expected.start_offset = 4;
+			expected.end_offset = 7;
+			break;
+		default:
+			assert(!"Unexpected token");
 	}
 
+	int test_short_phrase_token_is_right =
+		expected.token == token.token;
+	int test_short_phrase_bounds_are_right =
+		expected.start_offset == token.start_offset &&
+		expected.end_offset == token.end_offset;
+	assert(test_short_phrase_token_is_right);
+	assert(test_short_phrase_bounds_are_right);
+	return (void_fn *)test_short_phrase_result;
+}
 
-	return EXIT_SUCCESS;
+int test_short_phrase()
+{
+	const char script[] = "foo bar";
+	struct csalt_cmemory csalt_script = csalt_cmemory_array(script);
+	int lex_result = scallop_lex(
+		(csalt_store *)&csalt_script,
+		test_short_phrase_result,
+		0
+	);
+	assert(lex_short_phrase_result_called == 3);
+	assert(lex_result == 0);
+	return 0;
+}
+
+int test_statements_result_called = 0;
+
+void_fn *test_statements_result(
+	csalt_store *source,
+	struct scallop_parse_token token,
+	void *param
+)
+{
+	(void)param;
+	test_statements_result_called++;
+	static int token_number = 0;
+	struct scallop_parse_token expected;
+	switch (token_number++) {
+		case 0:
+			expected.token = SCALLOP_TOKEN_WORD;
+			expected.start_offset = 0;
+			expected.end_offset = 3;
+			break;
+		case 1:
+			expected.token = SCALLOP_TOKEN_STATEMENT_SEPARATOR;
+			expected.start_offset = 3;
+			expected.end_offset = 5;
+			break;
+		case 2:
+			expected.token = SCALLOP_TOKEN_WORD;
+			expected.start_offset = 5;
+			expected.end_offset = 8;
+			break;
+		case 3:
+			expected.token = SCALLOP_TOKEN_WORD_SEPARATOR;
+			expected.start_offset = 8;
+			expected.end_offset = 9;
+			break;
+		case 4:
+			expected.token = SCALLOP_TOKEN_WORD;
+			expected.start_offset = 9;
+			expected.end_offset = 12;
+			break;
+		case 5:
+			expected.token = SCALLOP_TOKEN_STATEMENT_SEPARATOR;
+			expected.start_offset = 12;
+			expected.end_offset = 13;
+			break;
+		default:
+			assert(!"Unexpected token");
+	}
+
+	int test_statements_token_is_same =
+		expected.token == token.token;
+	int test_statements_bounds_are_same =
+		expected.start_offset == token.start_offset &&
+		expected.end_offset == token.end_offset;
+	assert(test_statements_token_is_same);
+	assert(test_statements_bounds_are_same);
+	return (void_fn *)test_statements_result;
+}
+
+int test_statements()
+{
+	const char script[] = "foo;\n"
+		"bar baz;";
+	struct csalt_cmemory csalt_script = csalt_cmemory_array(script);
+	int lex_result = scallop_lex(
+		(csalt_store *)&csalt_script,
+		test_statements_result,
+		0
+	);
+	assert(test_statements_result_called == 6);
+	assert(lex_result == 0);
+	return 0;
+}
+
+int test_quoted_strings_result_called = 0;
+
+void_fn *test_quoted_strings_result(
+	csalt_store *source,
+	struct scallop_parse_token result,
+	void *param
+)
+{
+	struct scallop_parse_token expected = { 0 };
+	switch (test_quoted_strings_result_called++) {
+		case 0:
+			expected.token = SCALLOP_TOKEN_WORD;
+			expected.start_offset = 0;
+			expected.end_offset = 11;
+			break;
+		case 1:
+			expected.token = SCALLOP_TOKEN_WORD_SEPARATOR;
+			expected.start_offset = 11;
+			expected.end_offset = 12;
+			break;
+		case 2:
+			expected.token = SCALLOP_TOKEN_WORD;
+			expected.start_offset = 12;
+			expected.end_offset = 17;
+			break;
+		default:
+			assert(!"Unexpected token");
+	}
+
+	char test_quoted_strings_token_is_same =
+		result.token == expected.token;
+	char test_quoted_strings_bounds_are_same =
+		result.start_offset == expected.start_offset &&
+		result.end_offset == expected.end_offset;
+
+	assert(test_quoted_strings_token_is_same);
+	assert(test_quoted_strings_bounds_are_same);
+	return (void_fn *)test_quoted_strings_result;
+}
+
+int test_quoted_strings()
+{
+	const char script[] = "foo'bar'baz 'baz'";
+	struct csalt_cmemory csalt_script = csalt_cmemory_array(script);
+	int lex_result = scallop_lex(
+		(csalt_store *)&csalt_script,
+		test_quoted_strings_result,
+		0
+	);
+	assert(test_quoted_strings_result_called == 3);
+	assert(lex_result == 0);
+	return 0;
 }
 
 int main()
 {
-	{
-		const char sample_script[] =
-			"https --ip=0.0.0.0 --port=443 [\n"
-			"	domain \"🎉.example.com\" [\n"
-			"		location '/.*\\.php' {\n"
-			"			log_access;\n"
-			"			php $location;\n"
-			"		}\n"
-			"	]\n"
-			"];";
-
-		struct csalt_cmemory csalt_string = csalt_cmemory_array(sample_script);
-
-		int error = scallop_lex((csalt_store *)&csalt_string, run_first_test, &csalt_string);
-		if (error) {
-			print_error("Error parsing valid script");
-			return error;
-		}
-	}
+	test_word();
+	test_word_separator();
+	test_short_phrase();
+	test_statements();
+	test_quoted_strings();
+	return EXIT_SUCCESS;
 }
