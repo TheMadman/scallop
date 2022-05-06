@@ -266,6 +266,16 @@ void_fn *test_quoted_strings_result(
 			expected.start_offset = 12;
 			expected.end_offset = 17;
 			break;
+		case 3:
+			expected.token = SCALLOP_TOKEN_STATEMENT_SEPARATOR;
+			expected.start_offset = 17;
+			expected.end_offset = 18;
+			break;
+		case 4:
+			expected.token = SCALLOP_TOKEN_WORD;
+			expected.start_offset = 18;
+			expected.end_offset = 25;
+			break;
 		default:
 			assert(!"Unexpected token");
 	}
@@ -283,14 +293,14 @@ void_fn *test_quoted_strings_result(
 
 int test_quoted_strings()
 {
-	const char script[] = "foo'bar'baz 'baz'";
+	const char script[] = "foo'bar'baz 'baz';'barry'";
 	struct csalt_cmemory csalt_script = csalt_cmemory_array(script);
 	int lex_result = scallop_lex(
 		(csalt_store *)&csalt_script,
 		test_quoted_strings_result,
 		0
 	);
-	assert(test_quoted_strings_result_called == 3);
+	assert(test_quoted_strings_result_called == 5);
 	assert(lex_result == 0);
 	return 0;
 }

@@ -208,9 +208,6 @@ struct next_state lex_quoted_utf8_start(
 struct next_state lex_quoted_utf8_cont(
 	struct next_char
 );
-struct next_state lex_quoted_string(
-	struct next_char
-);
 struct next_state lex_double_quoted_string(
 	struct next_char
 );
@@ -320,9 +317,21 @@ struct next_state lex_end_quoted_string(
 	struct next_char next_char
 )
 {
+	enum CHAR_TYPE input = next_char.type;
+	struct scallop_parse_token token = next_char.token;
+	struct state_transition_row transitions[] = {
+		{ lex_end_quoted_string, CHAR_ASCII_PRINTABLE, lex_word },
+		{ lex_end_quoted_string, CHAR_UTF8_START, lex_utf8_start },
+		{ lex_end_quoted_string, CHAR_QUOTE, lex_quoted_string },
+		{ lex_end_quoted_string, CHAR_WORD_SEPARATOR, lex_word_separator },
+		{ lex_end_quoted_string, CHAR_STATEMENT_SEPARATOR, lex_statement_separator },
+		{ lex_end_quoted_string, CHAR_NULL, lex_end },
+
+	};
+
 	return (struct next_state) {
-		(void_fn *)lex_begin,
-		next_char.token,
+		transition_state(transitions, lex_end_quoted_string, input),
+		token,
 	};
 }
 
@@ -334,12 +343,13 @@ struct next_state lex_quoted_string(
 	struct scallop_parse_token token = next_char.token;
 	token.token = SCALLOP_TOKEN_WORD;
 	struct state_transition_row transitions[] = {
-		{ lex_quoted_string, CHAR_QUOTE, lex_end_quoted_string },
 		{ lex_quoted_string, CHAR_ASCII_PRINTABLE, lex_quoted_string },
 		{ lex_quoted_string, CHAR_UTF8_START, lex_quoted_utf8_start },
-		// { lex_quoted_string, CHAR_BACKSLASH, lex_escape },
 		{ lex_quoted_string, CHAR_WORD_SEPARATOR, lex_quoted_string },
 		{ lex_quoted_string, CHAR_STATEMENT_SEPARATOR, lex_quoted_string },
+		// { lex_quoted_string, CHAR_BACKSLASH, lex_escape },
+		{ lex_quoted_string, CHAR_QUOTE, lex_end_quoted_string },
+		{ lex_quoted_string, CHAR_NULL, lex_end },
 	};
 
 	return (struct next_state) {
@@ -403,6 +413,7 @@ struct next_state lex_statement_separator(
 		{ lex_statement_separator, CHAR_STATEMENT_SEPARATOR, lex_statement_separator },
 		{ lex_statement_separator, CHAR_ASCII_PRINTABLE, lex_word },
 		{ lex_statement_separator, CHAR_UTF8_START, lex_utf8_start },
+		{ lex_statement_separator, CHAR_QUOTE, lex_quoted_string },
 		{ lex_statement_separator, CHAR_WORD_SEPARATOR, lex_word_separator },
 		{ lex_statement_separator, CHAR_NULL, lex_end },
 	};
