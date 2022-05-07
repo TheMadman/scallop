@@ -293,7 +293,7 @@ void_fn *test_quoted_strings_result(
 
 int test_quoted_strings()
 {
-	const char script[] = "foo'bar'baz 'baz';'barry'";
+	const char script[] = "foo'bar'baz 'baz';'💩y'";
 	struct csalt_cmemory csalt_script = csalt_cmemory_array(script);
 	int lex_result = scallop_lex(
 		(csalt_store *)&csalt_script,
@@ -305,6 +305,71 @@ int test_quoted_strings()
 	return 0;
 }
 
+int test_double_quoted_strings_result_called = 0;
+
+void_fn *test_double_quoted_strings_result(
+	csalt_store *source,
+	struct scallop_parse_token result,
+	void *param
+)
+{
+	struct scallop_parse_token expected = { 0 };
+	switch (test_double_quoted_strings_result_called++) {
+		case 0:
+			expected.token = SCALLOP_TOKEN_WORD;
+			expected.start_offset = 0;
+			expected.end_offset = 11;
+			break;
+		case 1:
+			expected.token = SCALLOP_TOKEN_WORD_SEPARATOR;
+			expected.start_offset = 11;
+			expected.end_offset = 12;
+			break;
+		case 2:
+			expected.token = SCALLOP_TOKEN_WORD;
+			expected.start_offset = 12;
+			expected.end_offset = 17;
+			break;
+		case 3:
+			expected.token = SCALLOP_TOKEN_STATEMENT_SEPARATOR;
+			expected.start_offset = 17;
+			expected.end_offset = 18;
+			break;
+		case 4:
+			expected.token = SCALLOP_TOKEN_WORD;
+			expected.start_offset = 18;
+			expected.end_offset = 25;
+			break;
+		default:
+			assert(!"Unexpected token");
+	}
+
+	char test_quoted_strings_token_is_same =
+		result.token == expected.token;
+	char test_quoted_strings_bounds_are_same =
+		result.start_offset == expected.start_offset &&
+		result.end_offset == expected.end_offset;
+
+	assert(test_quoted_strings_token_is_same);
+	assert(test_quoted_strings_bounds_are_same);
+	return (void_fn *)test_double_quoted_strings_result;
+
+}
+
+int test_double_quoted_strings()
+{
+	const char script[] = "foo\"bar\"baz \"baz\";\"💩y\"";
+	struct csalt_cmemory csalt_script = csalt_cmemory_array(script);
+	int lex_result = scallop_lex(
+		(csalt_store *)&csalt_script,
+		test_double_quoted_strings_result,
+		0
+	);
+	assert(test_double_quoted_strings_result_called == 5);
+	assert(lex_result == 0);
+	return 0;
+}
+
 int main()
 {
 	test_word();
@@ -312,5 +377,6 @@ int main()
 	test_short_phrase();
 	test_statements();
 	test_quoted_strings();
+	test_double_quoted_strings();
 	return EXIT_SUCCESS;
 }

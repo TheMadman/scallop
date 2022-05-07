@@ -208,9 +208,6 @@ struct next_state lex_quoted_utf8_start(
 struct next_state lex_quoted_utf8_cont(
 	struct next_char
 );
-struct next_state lex_double_quoted_string(
-	struct next_char
-);
 struct next_state lex_word_separator(
 	struct next_char
 );
@@ -221,6 +218,18 @@ struct next_state lex_end_quoted_string(
 	struct next_char next_char
 );
 struct next_state lex_quoted_string(
+	struct next_char next_char
+);
+struct next_state lex_double_quoted_utf8_start(
+	struct next_char next_char
+);
+struct next_state lex_double_quoted_utf8_cont(
+	struct next_char next_char
+);
+struct next_state lex_double_quoted_string(
+	struct next_char next_char
+);
+struct next_state lex_end_double_quoted_string(
 	struct next_char next_char
 );
 struct next_state lex_word(
@@ -304,7 +313,12 @@ struct next_state lex_quoted_utf8_cont(
 	struct scallop_parse_token token = next_char.token;
 	struct state_transition_row transitions[] = {
 		{ lex_quoted_utf8_cont, CHAR_UTF8_CONT, lex_quoted_utf8_cont },
-		{ lex_quoted_utf8_cont, CHAR_QUOTE, lex_begin },
+		{ lex_quoted_utf8_cont, CHAR_ASCII_PRINTABLE, lex_quoted_string },
+		{ lex_quoted_utf8_cont, CHAR_WORD_SEPARATOR, lex_quoted_string },
+		{ lex_quoted_utf8_cont, CHAR_STATEMENT_SEPARATOR, lex_quoted_string },
+		{ lex_quoted_utf8_cont, CHAR_DOUBLE_QUOTE, lex_quoted_string },
+		{ lex_quoted_utf8_cont, CHAR_QUOTE, lex_end_quoted_string },
+		{ lex_quoted_utf8_cont, CHAR_WORD_SEPARATOR, lex_quoted_string },
 	};
 
 	return (struct next_state) {
@@ -348,12 +362,96 @@ struct next_state lex_quoted_string(
 		{ lex_quoted_string, CHAR_WORD_SEPARATOR, lex_quoted_string },
 		{ lex_quoted_string, CHAR_STATEMENT_SEPARATOR, lex_quoted_string },
 		// { lex_quoted_string, CHAR_BACKSLASH, lex_escape },
+		{ lex_quoted_string, CHAR_DOUBLE_QUOTE, lex_quoted_string },
 		{ lex_quoted_string, CHAR_QUOTE, lex_end_quoted_string },
 		{ lex_quoted_string, CHAR_NULL, lex_end },
 	};
 
 	return (struct next_state) {
 		transition_state(transitions, lex_quoted_string, input),
+		token,
+	};
+}
+
+struct next_state lex_double_quoted_utf8_start(
+	struct next_char next_char
+)
+{
+	enum CHAR_TYPE input = next_char.type;
+	struct scallop_parse_token token = next_char.token;
+	struct state_transition_row transitions[] = {
+		{ lex_double_quoted_utf8_start, CHAR_UTF8_CONT, lex_double_quoted_utf8_cont },
+	};
+
+	return (struct next_state) {
+		transition_state(transitions, lex_double_quoted_utf8_start, input),
+		token,
+	};
+}
+
+struct next_state lex_double_quoted_utf8_cont(
+	struct next_char next_char
+)
+{
+	enum CHAR_TYPE input = next_char.type;
+	struct scallop_parse_token token = next_char.token;
+	struct state_transition_row transitions[] = {
+		{ lex_double_quoted_utf8_cont, CHAR_ASCII_PRINTABLE, lex_double_quoted_string },
+		{ lex_double_quoted_utf8_cont, CHAR_WORD_SEPARATOR, lex_double_quoted_string },
+		{ lex_double_quoted_utf8_cont, CHAR_STATEMENT_SEPARATOR, lex_double_quoted_string },
+		{ lex_double_quoted_utf8_cont, CHAR_QUOTE, lex_double_quoted_string },
+		{ lex_double_quoted_utf8_cont, CHAR_UTF8_START, lex_double_quoted_utf8_start },
+		{ lex_double_quoted_utf8_cont, CHAR_UTF8_CONT, lex_double_quoted_utf8_cont },
+		{ lex_double_quoted_utf8_cont, CHAR_DOUBLE_QUOTE, lex_begin },
+	};
+
+	return (struct next_state) {
+		transition_state(transitions, lex_double_quoted_utf8_cont, input),
+		token,
+	};
+}
+
+struct next_state lex_double_quoted_string(
+	struct next_char next_char
+)
+{
+	enum CHAR_TYPE input = next_char.type;
+	struct scallop_parse_token token = next_char.token;
+	token.token = SCALLOP_TOKEN_WORD;
+	struct state_transition_row transitions[] = {
+		{ lex_double_quoted_string, CHAR_ASCII_PRINTABLE, lex_double_quoted_string },
+		{ lex_double_quoted_string, CHAR_WORD_SEPARATOR, lex_double_quoted_string },
+		{ lex_double_quoted_string, CHAR_STATEMENT_SEPARATOR, lex_double_quoted_string },
+		{ lex_double_quoted_string, CHAR_QUOTE, lex_double_quoted_string },
+		{ lex_double_quoted_string, CHAR_UTF8_START, lex_double_quoted_utf8_start },
+		{ lex_double_quoted_string, CHAR_DOUBLE_QUOTE, lex_end_double_quoted_string },
+		{ lex_double_quoted_string, CHAR_NULL, lex_end },
+	};
+
+	return (struct next_state) {
+		transition_state(transitions, lex_double_quoted_string, input),
+		token,
+	};
+}
+
+struct next_state lex_end_double_quoted_string(
+	struct next_char next_char
+)
+{
+	enum CHAR_TYPE input = next_char.type;
+	struct scallop_parse_token token = next_char.token;
+	struct state_transition_row transitions[] = {
+		{ lex_end_double_quoted_string, CHAR_ASCII_PRINTABLE, lex_word },
+		{ lex_end_double_quoted_string, CHAR_UTF8_START, lex_utf8_start },
+		{ lex_end_double_quoted_string, CHAR_WORD_SEPARATOR, lex_word_separator },
+		{ lex_end_double_quoted_string, CHAR_STATEMENT_SEPARATOR, lex_statement_separator },
+		{ lex_end_double_quoted_string, CHAR_QUOTE, lex_quoted_string },
+		{ lex_end_double_quoted_string, CHAR_DOUBLE_QUOTE, lex_double_quoted_string, },
+		{ lex_end_double_quoted_string, CHAR_NULL, lex_end },
+	};
+
+	return (struct next_state) {
+		transition_state(transitions, lex_end_double_quoted_string, input),
 		token,
 	};
 }
@@ -369,6 +467,7 @@ struct next_state lex_word_separator(
 		{ lex_word_separator, CHAR_WORD_SEPARATOR, lex_word_separator },
 		{ lex_word_separator, CHAR_ASCII_PRINTABLE, lex_word },
 		{ lex_word_separator, CHAR_QUOTE, lex_quoted_string },
+		{ lex_word_separator, CHAR_DOUBLE_QUOTE, lex_double_quoted_string },
 		{ lex_word_separator, CHAR_UTF8_START, lex_utf8_start },
 		{ lex_word_separator, CHAR_NULL, lex_end },
 	};
@@ -390,7 +489,7 @@ struct next_state lex_word(
 		{ lex_word, CHAR_ASCII_PRINTABLE, lex_word },
 		{ lex_word, CHAR_UTF8_START, lex_utf8_start },
 		{ lex_word, CHAR_QUOTE, lex_quoted_string },
-		// { lex_word, CHAR_DOUBLE_QUOTE, lex_double_quoted_string },
+		{ lex_word, CHAR_DOUBLE_QUOTE, lex_double_quoted_string },
 		{ lex_word, CHAR_WORD_SEPARATOR, lex_word_separator },
 		{ lex_word, CHAR_STATEMENT_SEPARATOR, lex_statement_separator },
 		{ lex_word, CHAR_NULL, lex_end},
@@ -414,6 +513,7 @@ struct next_state lex_statement_separator(
 		{ lex_statement_separator, CHAR_ASCII_PRINTABLE, lex_word },
 		{ lex_statement_separator, CHAR_UTF8_START, lex_utf8_start },
 		{ lex_statement_separator, CHAR_QUOTE, lex_quoted_string },
+		{ lex_statement_separator, CHAR_DOUBLE_QUOTE, lex_double_quoted_string },
 		{ lex_statement_separator, CHAR_WORD_SEPARATOR, lex_word_separator },
 		{ lex_statement_separator, CHAR_NULL, lex_end },
 	};
@@ -434,6 +534,7 @@ struct next_state lex_begin(
 		{ lex_begin, CHAR_ASCII_PRINTABLE, lex_word },
 		{ lex_begin, CHAR_UTF8_START, lex_word },
 		{ lex_begin, CHAR_QUOTE, lex_quoted_string },
+		{ lex_begin, CHAR_DOUBLE_QUOTE, lex_double_quoted_string },
 		{ lex_begin, CHAR_WORD_SEPARATOR, lex_word_separator },
 		{ lex_begin, CHAR_STATEMENT_SEPARATOR, lex_statement_separator },
 		{ lex_begin, CHAR_NULL, lex_end },
