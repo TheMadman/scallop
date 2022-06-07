@@ -66,37 +66,16 @@ struct scallop_parse_token {
 	int64_t col;
 };
 
-typedef void void_fn(void);
-
 /**
- * \brief This type represents a parse function.
+ * \brief Takes a store representing the UTF-8 source
+ * 	code and returns the next token.
  *
- * it takes a single scallop_parse_token and an arbitrary
- * void pointer and returns a pointer to the next parse
- * function, or a null pointer if there was an error.
- *
- * Note that you should cast your return value to this
- * type to avoid warnings.
+ * Pass a zero-initialized token for the beginning of
+ * lexing; to continue lexing, pass the previously-returned token.
  */
-typedef void_fn *scallop_parse_fn(
-	csalt_store *,
-	struct scallop_parse_token,
-	void *
-);
-
-/**
- * \brief Lexes UTF-8 text in source into tokens, one at
- * 	a time, and passed to parse functions, the first
- * 	of which is passed as first_parse_functions.
- *
- * first_parse_function will take the first token and
- * should return a pointer to the function expecting the next token,
- * or a null pointer if the first token was invalid.
- */
-int scallop_lex(
+struct scallop_parse_token scallop_lex(
 	csalt_store *source,
-	scallop_parse_fn *first_parse_function,
-	void *param
+	struct scallop_parse_token token
 );
 
 #ifdef __cplusplus
