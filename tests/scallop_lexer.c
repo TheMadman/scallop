@@ -26,7 +26,15 @@
 
 #define print_error(format, ...) fprintf(stderr, "%s:%d: " format "\n", __FILE__, __LINE__ __VA_OPT__(,) __VA_ARGS__)
 
+#define assert_tokens_equal(expected, actual) \
+{ \
+	assert((expected).token == (actual).token); \
+	assert((expected).start_offset == (actual).start_offset); \
+	assert((expected).end_offset == (actual).end_offset); \
+}
+
 const char *token_types[] = {
+	"SCALLOP_TOKEN_EOF",
 	"SCALLOP_TOKEN_WORD",
 	"SCALLOP_TOKEN_WORD_SEPARATOR",
 	"SCALLOP_TOKEN_STATEMENT_SEPARATOR",
@@ -39,112 +47,104 @@ const char *token_types[] = {
 	"SCALLOP_TOKEN_BINARY_PIPE",
 };
 
+// This upsets the syntax highlighter of (n)vim.
+// Not gonna lie, it kinda upsets me too.
+#define expect(script, ...) \
+{ \
+	struct csalt_cmemory csalt_script = csalt_cmemory_array(script); \
+	csalt_store * const store = (csalt_store *)&csalt_script; \
+	static const struct scallop_parse_token expects[] = { \
+		__VA_ARGS__ \
+	}; \
+	const struct scallop_parse_token *expected = expects; \
+	struct scallop_parse_token actual = { 0 }; \
+	for ( \
+		actual = scallop_lex(store, actual); \
+		actual.token != SCALLOP_TOKEN_EOF; \
+		actual = scallop_lex(store, actual), ++expected \
+	) { \
+		print_error( \
+			"expected: %s %ld -> %ld", \
+			token_types[expected->token], \
+			expected->start_offset, \
+			expected->end_offset \
+		); \
+		print_error( \
+			"actual: %s %ld -> %ld", \
+			token_types[actual.token], \
+			actual.start_offset, \
+			actual.end_offset \
+		); \
+		assert_tokens_equal(*expected, actual); \
+	} \
+}
+
 void test_word()
 {
-	const char script[] = "foo";
-	struct csalt_cmemory csalt_script = csalt_cmemory_array(script);
+	static const char script[] = "foo";
 
-	struct scallop_parse_token expected = {
-		.token = SCALLOP_TOKEN_WORD,
-		.start_offset = 0,
-		.end_offset = 3,
-	};
-	struct scallop_parse_token actual = { 0 };
-	actual = scallop_lex((csalt_store *)&csalt_script, actual);
-
-	assert(expected.token == actual.token);
-	assert(expected.start_offset == actual.start_offset);
-	assert(expected.end_offset == actual.end_offset);
-
-	actual = scallop_lex((csalt_store *)&csalt_script, actual);
-
-	expected = (struct scallop_parse_token) {
-		.token = SCALLOP_TOKEN_EOF,
-		.start_offset = 3,
-		.end_offset = 4,
-	};
-
-	assert(expected.token == actual.token);
-	assert(expected.start_offset == actual.start_offset);
-	assert(expected.end_offset == actual.end_offset);
+	expect(script,
+		{ SCALLOP_TOKEN_WORD, 0, 3 },
+		{ SCALLOP_TOKEN_EOF, 3, 4 }
+	);
 }
 
 void test_word_separator()
 {
-	const char script[] = " \t";
-	struct csalt_cmemory csalt_script = csalt_cmemory_array(script);
-
-	struct scallop_parse_token expected = {
-		.token = SCALLOP_TOKEN_WORD_SEPARATOR,
-		.start_offset = 0,
-		.end_offset = 2,
-	};
-	struct scallop_parse_token actual = { 0 };
-	actual = scallop_lex((csalt_store *)&csalt_script, actual);
-
-	assert(expected.token == actual.token);
-	assert(expected.start_offset == actual.start_offset);
-	assert(expected.end_offset == actual.end_offset);
-
-	actual = scallop_lex((csalt_store *)&csalt_script, actual);
-
-	expected = (struct scallop_parse_token) {
-		.token = SCALLOP_TOKEN_EOF,
-		.start_offset = 2,
-		.end_offset = 3,
-	};
-
-	assert(expected.token == actual.token);
-	assert(expected.start_offset == actual.start_offset);
-	assert(expected.end_offset == actual.end_offset);
+	static const char script[] = " \t";
+	
+	expect(script,
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 0, 2 },
+		{ SCALLOP_TOKEN_EOF, 2, 3 }
+	);
 }
 
 void test_short_phrase()
 {
-	const char script[] = "foo bar\tbaz";
-	struct csalt_cmemory csalt_script = csalt_cmemory_array(script);
-	
-	struct scallop_parse_token expected = {
-		.token = SCALLOP_TOKEN_WORD,
-		.start_offset = 0,
-		.end_offset = 3,
-	};
-	struct scallop_parse_token actual = { 0 };
-	actual = scallop_lex((csalt_store *)&csalt_script, actual);
+	static const char script[] = "foo bar\tbaz";
 
-	assert(expected.token == actual.token);
-	assert(expected.start_offset == actual.start_offset);
-	assert(expected.end_offset == actual.end_offset);
-	
-	actual = scallop_lex((csalt_store *)&csalt_script, actual);
-
-	expected = (struct scallop_parse_token) {
-		.token = SCALLOP_TOKEN_WORD_SEPARATOR,
-		.start_offset = 3,
-		.end_offset = 4,
-	};
-
-	assert(expected.token == actual.token);
-	assert(expected.start_offset == actual.start_offset);
-	assert(expected.end_offset == actual.end_offset);
+	expect(script,
+		{ SCALLOP_TOKEN_WORD, 0, 3 },
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 3, 4 },
+		{ SCALLOP_TOKEN_WORD, 4, 7 },
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 7, 8 },
+		{ SCALLOP_TOKEN_WORD, 8, 11 },
+		{ SCALLOP_TOKEN_EOF, 11, 12 }
+	);
 }
 
 void test_statements()
 {
-	const char script[] = "foo; bar baz\nbarry;";
-	struct csalt_cmemory csalt_script = csalt_cmemory_array(script);
+	static const char script[] = "foo; bar baz\nbarry;";
 
-	struct scallop_parse_token expected = {
-		.token = SCALLOP_TOKEN_WORD,
-		.start_offset = 0,
-		.end_offset = 3,
-	};
-	struct scallop_parse_token actual = { 0 };
-	actual = scallop_lex((csalt_store *)&csalt_script, actual);
+	expect(script,
+		{ SCALLOP_TOKEN_WORD, 0, 3 },
+		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 3, 4 },
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 4, 5 },
+		{ SCALLOP_TOKEN_WORD, 5, 8 },
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 8, 9 },
+		{ SCALLOP_TOKEN_WORD, 9, 12 },
+		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 12, 13 },
+		{ SCALLOP_TOKEN_WORD, 13, 18 },
+		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 18, 19 },
+		{ SCALLOP_TOKEN_EOF, 19, 20 }
+	);
+}
 
-	assert(expected.token == actual.token);
-	assert(expected.start_offset == actual.start_offset);
-	assert(expected.end_offset == actual.end_offset);
+void test_quoted_strings()
+{
+	static const char script[] = "'foo' foo'bar' 'bar'baz foo'bar'baz";
+
+	expect(script,
+		{ SCALLOP_TOKEN_WORD, 0, 5 },
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 5, 6 },
+		{ SCALLOP_TOKEN_WORD, 6, 14},
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 14, 15 },
+		{ SCALLOP_TOKEN_WORD, 15, 23 },
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 23, 24 },
+		{ SCALLOP_TOKEN_WORD, 24, 35 },
+		{ SCALLOP_TOKEN_EOF, 35, 36 }
+	);
 }
 
 int main()
@@ -152,8 +152,8 @@ int main()
 	test_word();
 	test_word_separator();
 	test_short_phrase();
-//	test_statements();
-//	test_quoted_strings();
+	test_statements();
+	test_quoted_strings();
 //	test_double_quoted_strings();
 //	test_open_curly_bracket();
 	return EXIT_SUCCESS;

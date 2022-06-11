@@ -228,6 +228,10 @@ struct scallop_parse_token lex_quoted_string(
 	csalt_store *,
 	struct scallop_parse_token
 );
+struct scallop_parse_token lex_end_quoted_string(
+	csalt_store *,
+	struct scallop_parse_token
+);
 struct scallop_parse_token lex_double_quoted_utf8_start(
 	csalt_store *,
 	struct scallop_parse_token
@@ -356,8 +360,28 @@ struct scallop_parse_token lex_quoted_string(
 		{ CHAR_WORD_SEPARATOR, lex_quoted_string },
 		{ CHAR_STATEMENT_SEPARATOR, lex_quoted_string },
 		// { CHAR_BACKSLASH, lex_escape },
-		{ CHAR_DOUBLE_QUOTE, lex_quoted_string },
-		{ CHAR_QUOTE, lex_end },
+		{ CHAR_DOUBLE_QUOTE, lex_double_quoted_string },
+		{ CHAR_QUOTE, lex_end_quoted_string },
+	};
+
+	return transition_state(transitions, input)(store, token);
+}
+
+struct scallop_parse_token lex_end_quoted_string(
+	csalt_store *store,
+	struct scallop_parse_token token
+)
+{
+	const struct next_char current_char = next_char(store, token);
+	const enum CHAR_TYPE input = current_char.type;
+	token = current_char.token;
+	static const struct state_transition_row transitions[] = {
+		{ CHAR_WORD_SEPARATOR, lex_end },
+		{ CHAR_STATEMENT_SEPARATOR, lex_end },
+		{ CHAR_ASCII_PRINTABLE, lex_word },
+		{ CHAR_UTF8_START, lex_utf8_start },
+		{ CHAR_QUOTE, lex_quoted_string },
+		{ CHAR_DOUBLE_QUOTE, lex_double_quoted_string },
 	};
 
 	return transition_state(transitions, input)(store, token);
