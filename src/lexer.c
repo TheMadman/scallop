@@ -244,6 +244,10 @@ struct scallop_parse_token lex_double_quoted_string(
 	csalt_store *,
 	struct scallop_parse_token
 );
+struct scallop_parse_token lex_end_double_quoted_string(
+	csalt_store *,
+	struct scallop_parse_token
+);
 struct scallop_parse_token lex_word(
 	csalt_store *,
 	struct scallop_parse_token
@@ -438,11 +442,20 @@ struct scallop_parse_token lex_double_quoted_string(
 		{ CHAR_STATEMENT_SEPARATOR, lex_double_quoted_string },
 		{ CHAR_QUOTE, lex_double_quoted_string },
 		{ CHAR_UTF8_START, lex_double_quoted_utf8_start },
-		{ CHAR_DOUBLE_QUOTE, lex_end },
+		{ CHAR_DOUBLE_QUOTE, lex_end_double_quoted_string },
 		{ CHAR_NULL, lex_end },
 	};
 
 	return transition_state(transitions, input)(store, token);
+}
+
+struct scallop_parse_token lex_end_double_quoted_string(
+	csalt_store *store,
+	struct scallop_parse_token token
+)
+{
+	// identical to quoted_string
+	return lex_end_quoted_string(store, token);
 }
 
 struct scallop_parse_token lex_word_separator(

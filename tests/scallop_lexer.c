@@ -147,6 +147,22 @@ void test_quoted_strings()
 	);
 }
 
+void test_double_quoted_strings()
+{
+	static const char script[] = "\"foo\" foo\"bar\" \"bar\"baz foo\"bar\"baz";
+
+	expect(script,
+		{ SCALLOP_TOKEN_WORD, 0, 5 },
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 5, 6 },
+		{ SCALLOP_TOKEN_WORD, 6, 14},
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 14, 15 },
+		{ SCALLOP_TOKEN_WORD, 15, 23 },
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 23, 24 },
+		{ SCALLOP_TOKEN_WORD, 24, 35 },
+		{ SCALLOP_TOKEN_EOF, 35, 36 }
+	);
+}
+
 int main()
 {
 	test_word();
@@ -154,7 +170,7 @@ int main()
 	test_short_phrase();
 	test_statements();
 	test_quoted_strings();
-//	test_double_quoted_strings();
+	test_double_quoted_strings();
 //	test_open_curly_bracket();
 	return EXIT_SUCCESS;
 }
