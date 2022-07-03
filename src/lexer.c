@@ -248,7 +248,27 @@ struct scallop_parse_token lex_end_double_quoted_string(
 	csalt_store *,
 	struct scallop_parse_token
 );
+struct scallop_parse_token lex_open_curly_bracket(
+	csalt_store *,
+	struct scallop_parse_token
+);
+struct scallop_parse_token lex_close_curly_bracket(
+	csalt_store *,
+	struct scallop_parse_token
+);
+struct scallop_parse_token lex_open_square_bracket(
+	csalt_store *,
+	struct scallop_parse_token
+);
+struct scallop_parse_token lex_close_square_bracket(
+	csalt_store *,
+	struct scallop_parse_token
+);
 struct scallop_parse_token lex_word(
+	csalt_store *,
+	struct scallop_parse_token
+);
+struct scallop_parse_token lex_escape_word(
 	csalt_store *,
 	struct scallop_parse_token
 );
@@ -286,6 +306,7 @@ struct scallop_parse_token lex_utf8_start(
 	const struct next_char current_char = next_char(store, token);
 	const enum CHAR_TYPE input = current_char.type;
 	token = current_char.token;
+	token.token = SCALLOP_TOKEN_WORD;
 	static const struct state_transition_row transitions[] = {
 		{ CHAR_UTF8_CONT, lex_utf8_cont },
 	};
@@ -305,8 +326,13 @@ struct scallop_parse_token lex_utf8_cont(
 		{ CHAR_UTF8_START, lex_utf8_start },
 		{ CHAR_UTF8_CONT, lex_utf8_cont },
 		{ CHAR_ASCII_PRINTABLE, lex_word },
+		{ CHAR_BACKSLASH, lex_escape_word },
 		{ CHAR_WORD_SEPARATOR, lex_end },
 		{ CHAR_STATEMENT_SEPARATOR, lex_end },
+		{ CHAR_OPEN_CURLY_BRACKET, lex_end },
+		{ CHAR_CLOSE_CURLY_BRACKET, lex_end },
+		{ CHAR_OPEN_SQUARE_BRACKET, lex_end },
+		{ CHAR_CLOSE_SQUARE_BRACKET, lex_end },
 		{ CHAR_NULL, lex_end },
 	};
 
@@ -337,12 +363,17 @@ struct scallop_parse_token lex_quoted_utf8_cont(
 	const enum CHAR_TYPE input = current_char.type;
 	token = current_char.token;
 	static const struct state_transition_row transitions[] = {
-		{ CHAR_UTF8_CONT, lex_quoted_utf8_cont },
 		{ CHAR_ASCII_PRINTABLE, lex_quoted_string },
 		{ CHAR_WORD_SEPARATOR, lex_quoted_string },
 		{ CHAR_STATEMENT_SEPARATOR, lex_quoted_string },
 		{ CHAR_DOUBLE_QUOTE, lex_quoted_string },
 		{ CHAR_WORD_SEPARATOR, lex_quoted_string },
+		{ CHAR_OPEN_CURLY_BRACKET, lex_quoted_string },
+		{ CHAR_CLOSE_CURLY_BRACKET, lex_quoted_string },
+		{ CHAR_OPEN_SQUARE_BRACKET, lex_quoted_string },
+		{ CHAR_CLOSE_SQUARE_BRACKET, lex_quoted_string },
+		{ CHAR_UTF8_START, lex_quoted_utf8_start },
+		{ CHAR_UTF8_CONT, lex_quoted_utf8_cont },
 		{ CHAR_QUOTE, lex_end },
 	};
 
@@ -363,8 +394,11 @@ struct scallop_parse_token lex_quoted_string(
 		{ CHAR_UTF8_START, lex_quoted_utf8_start },
 		{ CHAR_WORD_SEPARATOR, lex_quoted_string },
 		{ CHAR_STATEMENT_SEPARATOR, lex_quoted_string },
-		// { CHAR_BACKSLASH, lex_escape },
-		{ CHAR_DOUBLE_QUOTE, lex_double_quoted_string },
+		{ CHAR_DOUBLE_QUOTE, lex_quoted_string },
+		{ CHAR_OPEN_CURLY_BRACKET, lex_quoted_string },
+		{ CHAR_CLOSE_CURLY_BRACKET, lex_quoted_string },
+		{ CHAR_OPEN_SQUARE_BRACKET, lex_quoted_string },
+		{ CHAR_CLOSE_SQUARE_BRACKET, lex_quoted_string },
 		{ CHAR_QUOTE, lex_end_quoted_string },
 	};
 
@@ -386,6 +420,12 @@ struct scallop_parse_token lex_end_quoted_string(
 		{ CHAR_UTF8_START, lex_utf8_start },
 		{ CHAR_QUOTE, lex_quoted_string },
 		{ CHAR_DOUBLE_QUOTE, lex_double_quoted_string },
+		{ CHAR_BACKSLASH, lex_escape_word },
+		{ CHAR_OPEN_CURLY_BRACKET, lex_end },
+		{ CHAR_CLOSE_CURLY_BRACKET, lex_end },
+		{ CHAR_OPEN_SQUARE_BRACKET, lex_end },
+		{ CHAR_CLOSE_SQUARE_BRACKET, lex_end },
+		{ CHAR_NULL, lex_eof },
 	};
 
 	return transition_state(transitions, input)(store, token);
@@ -419,6 +459,10 @@ struct scallop_parse_token lex_double_quoted_utf8_cont(
 		{ CHAR_WORD_SEPARATOR, lex_double_quoted_string },
 		{ CHAR_STATEMENT_SEPARATOR, lex_double_quoted_string },
 		{ CHAR_QUOTE, lex_double_quoted_string },
+		{ CHAR_OPEN_CURLY_BRACKET, lex_double_quoted_string },
+		{ CHAR_CLOSE_CURLY_BRACKET, lex_double_quoted_string },
+		{ CHAR_OPEN_SQUARE_BRACKET, lex_double_quoted_string },
+		{ CHAR_CLOSE_SQUARE_BRACKET, lex_double_quoted_string },
 		{ CHAR_UTF8_START, lex_double_quoted_utf8_start },
 		{ CHAR_UTF8_CONT, lex_double_quoted_utf8_cont },
 		{ CHAR_DOUBLE_QUOTE, lex_end },
@@ -443,6 +487,10 @@ struct scallop_parse_token lex_double_quoted_string(
 		{ CHAR_QUOTE, lex_double_quoted_string },
 		{ CHAR_UTF8_START, lex_double_quoted_utf8_start },
 		{ CHAR_DOUBLE_QUOTE, lex_end_double_quoted_string },
+		{ CHAR_OPEN_CURLY_BRACKET, lex_double_quoted_string },
+		{ CHAR_CLOSE_CURLY_BRACKET, lex_double_quoted_string },
+		{ CHAR_OPEN_SQUARE_BRACKET, lex_double_quoted_string },
+		{ CHAR_CLOSE_SQUARE_BRACKET, lex_double_quoted_string },
 		{ CHAR_NULL, lex_end },
 	};
 
@@ -469,10 +517,15 @@ struct scallop_parse_token lex_word_separator(
 	token.token = SCALLOP_TOKEN_WORD_SEPARATOR;
 	static const struct state_transition_row transitions[] = {
 		{ CHAR_WORD_SEPARATOR, lex_word_separator },
+		{ CHAR_BACKSLASH, lex_end },
 		{ CHAR_ASCII_PRINTABLE, lex_end },
 		{ CHAR_QUOTE, lex_end },
 		{ CHAR_DOUBLE_QUOTE, lex_end },
 		{ CHAR_UTF8_START, lex_end },
+		{ CHAR_OPEN_CURLY_BRACKET, lex_end },
+		{ CHAR_CLOSE_CURLY_BRACKET, lex_end },
+		{ CHAR_OPEN_SQUARE_BRACKET, lex_end },
+		{ CHAR_CLOSE_SQUARE_BRACKET, lex_end },
 		{ CHAR_NULL, lex_end },
 	};
 
@@ -491,15 +544,61 @@ struct scallop_parse_token lex_word(
 	static const struct state_transition_row transitions[] = {
 		{ CHAR_ASCII_PRINTABLE, lex_word },
 		{ CHAR_UTF8_START, lex_utf8_start },
+		{ CHAR_BACKSLASH, lex_escape_word },
 		{ CHAR_QUOTE, lex_quoted_string },
 		{ CHAR_DOUBLE_QUOTE, lex_double_quoted_string },
 		{ CHAR_WORD_SEPARATOR, lex_end },
 		{ CHAR_STATEMENT_SEPARATOR, lex_end },
+		{ CHAR_OPEN_CURLY_BRACKET, lex_end },
+		{ CHAR_CLOSE_CURLY_BRACKET, lex_end },
+		{ CHAR_OPEN_SQUARE_BRACKET, lex_end },
+		{ CHAR_CLOSE_SQUARE_BRACKET, lex_end },
 		{ CHAR_NULL, lex_end},
 	};
 
 	return transition_state(transitions, input)(store, token);
 }
+
+struct scallop_parse_token lex_open_curly_bracket(
+	csalt_store *store,
+	struct scallop_parse_token token
+)
+{
+	token.token = SCALLOP_TOKEN_OPEN_CURLY_BRACKET;
+	++token.end_offset;
+	return token;
+}
+
+struct scallop_parse_token lex_close_curly_bracket(
+	csalt_store *store,
+	struct scallop_parse_token token
+)
+{
+	token.token = SCALLOP_TOKEN_CLOSE_CURLY_BRACKET;
+	++token.end_offset;
+	return token;
+}
+
+struct scallop_parse_token lex_open_square_bracket(
+	csalt_store *store,
+	struct scallop_parse_token token
+)
+{
+	token.token = SCALLOP_TOKEN_OPEN_SQUARE_BRACKET;
+	++token.end_offset;
+	return token;
+}
+
+struct scallop_parse_token lex_close_square_bracket(
+	csalt_store *store,
+	struct scallop_parse_token token
+)
+{
+	token.token = SCALLOP_TOKEN_CLOSE_SQUARE_BRACKET;
+	++token.end_offset;
+	return token;
+}
+
 
 struct scallop_parse_token lex_statement_separator(
 	csalt_store *store,
@@ -511,19 +610,52 @@ struct scallop_parse_token lex_statement_separator(
 	token = current_char.token;
 	token.token = SCALLOP_TOKEN_STATEMENT_SEPARATOR;
 	static const struct state_transition_row transitions[] = {
-		{ CHAR_STATEMENT_SEPARATOR, lex_end },
+		{ CHAR_STATEMENT_SEPARATOR, lex_statement_separator },
 		{ CHAR_ASCII_PRINTABLE, lex_end },
 		{ CHAR_UTF8_START, lex_end },
+		{ CHAR_BACKSLASH, lex_end },
 		{ CHAR_QUOTE, lex_end },
 		{ CHAR_DOUBLE_QUOTE, lex_end },
 		{ CHAR_WORD_SEPARATOR, lex_end },
+		{ CHAR_OPEN_CURLY_BRACKET, lex_end },
+		{ CHAR_CLOSE_CURLY_BRACKET, lex_end },
+		{ CHAR_OPEN_SQUARE_BRACKET, lex_end },
+		{ CHAR_CLOSE_SQUARE_BRACKET, lex_end },
 		{ CHAR_NULL, lex_end },
 	};
 
 	return transition_state(transitions, input)(store, token);
 }
 
-struct scallop_parse_token token_rewind(
+struct scallop_parse_token lex_escape_word(
+	csalt_store *store,
+	struct scallop_parse_token token
+)
+{
+	const struct next_char escaped_char = next_char(store, token);
+	const struct next_char current_char = next_char(store, escaped_char.token);
+	const enum CHAR_TYPE input = current_char.type;
+	token = current_char.token;
+	token.token = SCALLOP_TOKEN_WORD;
+	static const struct state_transition_row transitions[] = {
+		{ CHAR_ASCII_PRINTABLE, lex_word },
+		{ CHAR_QUOTE, lex_quoted_string },
+		{ CHAR_DOUBLE_QUOTE, lex_double_quoted_string },
+		{ CHAR_UTF8_START, lex_utf8_start },
+		{ CHAR_OPEN_CURLY_BRACKET, lex_end },
+		{ CHAR_CLOSE_CURLY_BRACKET, lex_end },
+		{ CHAR_OPEN_SQUARE_BRACKET, lex_end },
+		{ CHAR_CLOSE_SQUARE_BRACKET, lex_end },
+		{ CHAR_WORD_SEPARATOR, lex_end },
+		{ CHAR_STATEMENT_SEPARATOR, lex_end },
+		{ CHAR_NULL, lex_end },
+	};
+
+	return transition_state(transitions, input)(store, token);
+}
+
+
+static struct scallop_parse_token token_rewind(
 	csalt_store *store,
 	struct scallop_parse_token token
 )
@@ -551,11 +683,16 @@ struct scallop_parse_token lex_begin(
 	token = current_char.token;
 	static const struct state_transition_row transitions[] = {
 		{ CHAR_ASCII_PRINTABLE, lex_word },
-		{ CHAR_UTF8_START, lex_word },
+		{ CHAR_UTF8_START, lex_utf8_start },
 		{ CHAR_QUOTE, lex_quoted_string },
 		{ CHAR_DOUBLE_QUOTE, lex_double_quoted_string },
 		{ CHAR_WORD_SEPARATOR, lex_word_separator },
+		{ CHAR_BACKSLASH, lex_escape_word },
 		{ CHAR_STATEMENT_SEPARATOR, lex_statement_separator },
+		{ CHAR_OPEN_CURLY_BRACKET, lex_open_curly_bracket },
+		{ CHAR_CLOSE_CURLY_BRACKET, lex_close_curly_bracket },
+		{ CHAR_OPEN_SQUARE_BRACKET, lex_open_square_bracket },
+		{ CHAR_CLOSE_SQUARE_BRACKET, lex_close_square_bracket },
 		{ CHAR_NULL, lex_eof },
 	};
 

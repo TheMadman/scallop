@@ -38,10 +38,10 @@ const char *token_types[] = {
 	"SCALLOP_TOKEN_WORD",
 	"SCALLOP_TOKEN_WORD_SEPARATOR",
 	"SCALLOP_TOKEN_STATEMENT_SEPARATOR",
-	"SCALLOP_TOKEN_OPENING_CURLY_BRACKET",
-	"SCALLOP_TOKEN_CLOSING_CURLY_BRACKET",
-	"SCALLOP_TOKEN_OPENING_SQUARE_BRACKET",
-	"SCALLOP_TOKEN_CLOSING_SQUARE_BRACKET",
+	"SCALLOP_TOKEN_OPEN_CURLY_BRACKET",
+	"SCALLOP_TOKEN_CLOSE_CURLY_BRACKET",
+	"SCALLOP_TOKEN_OPEN_SQUARE_BRACKET",
+	"SCALLOP_TOKEN_CLOSE_SQUARE_BRACKET",
 	"SCALLOP_TOKEN_ASSIGNMENT_OPERATOR",
 	"SCALLOP_TOKEN_PIPE",
 	"SCALLOP_TOKEN_BINARY_PIPE",
@@ -163,6 +163,99 @@ void test_double_quoted_strings()
 	);
 }
 
+void test_open_curly_brackets()
+{
+	static const char script[] = "{ {a{{💩{;{\"{\"{'{'";
+	expect(script,
+		{ SCALLOP_TOKEN_OPEN_CURLY_BRACKET, 0, 1 },
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 1, 2 },
+		{ SCALLOP_TOKEN_OPEN_CURLY_BRACKET, 2, 3 },
+		{ SCALLOP_TOKEN_WORD, 3, 4 },
+		{ SCALLOP_TOKEN_OPEN_CURLY_BRACKET, 4, 5 },
+		{ SCALLOP_TOKEN_OPEN_CURLY_BRACKET, 5, 6 },
+		{ SCALLOP_TOKEN_WORD, 6, 10 },
+		{ SCALLOP_TOKEN_OPEN_CURLY_BRACKET, 10, 11 },
+		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 11, 12 },
+		{ SCALLOP_TOKEN_OPEN_CURLY_BRACKET, 12, 13 },
+		{ SCALLOP_TOKEN_WORD, 13, 16 },
+		{ SCALLOP_TOKEN_OPEN_CURLY_BRACKET, 16, 17 },
+		{ SCALLOP_TOKEN_EOF, 6, 7 }
+	);
+}
+
+void test_close_curly_brackets()
+{
+	static const char script[] = "} }a}}💩};}\"}\"}'}'";
+	expect(script,
+		{ SCALLOP_TOKEN_CLOSE_CURLY_BRACKET, 0, 1 },
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 1, 2 },
+		{ SCALLOP_TOKEN_CLOSE_CURLY_BRACKET, 2, 3 },
+		{ SCALLOP_TOKEN_WORD, 3, 4 },
+		{ SCALLOP_TOKEN_CLOSE_CURLY_BRACKET, 4, 5 },
+		{ SCALLOP_TOKEN_CLOSE_CURLY_BRACKET, 5, 6 },
+		{ SCALLOP_TOKEN_WORD, 6, 10 },
+		{ SCALLOP_TOKEN_CLOSE_CURLY_BRACKET, 10, 11 },
+		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 11, 12 },
+		{ SCALLOP_TOKEN_CLOSE_CURLY_BRACKET, 12, 13 },
+		{ SCALLOP_TOKEN_WORD, 13, 16 },
+		{ SCALLOP_TOKEN_CLOSE_CURLY_BRACKET, 16, 17 },
+		{ SCALLOP_TOKEN_EOF, 6, 7 }
+	);
+}
+
+void test_open_square_brackets()
+{
+	static const char script[] = "[ [a[[💩[;[\"[\"['['";
+	expect(script,
+		{ SCALLOP_TOKEN_OPEN_SQUARE_BRACKET, 0, 1 },
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 1, 2 },
+		{ SCALLOP_TOKEN_OPEN_SQUARE_BRACKET, 2, 3 },
+		{ SCALLOP_TOKEN_WORD, 3, 4 },
+		{ SCALLOP_TOKEN_OPEN_SQUARE_BRACKET, 4, 5 },
+		{ SCALLOP_TOKEN_OPEN_SQUARE_BRACKET, 5, 6 },
+		{ SCALLOP_TOKEN_WORD, 6, 10 },
+		{ SCALLOP_TOKEN_OPEN_SQUARE_BRACKET, 10, 11 },
+		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 11, 12 },
+		{ SCALLOP_TOKEN_OPEN_SQUARE_BRACKET, 12, 13 },
+		{ SCALLOP_TOKEN_WORD, 13, 16 },
+		{ SCALLOP_TOKEN_OPEN_SQUARE_BRACKET, 16, 17 },
+		{ SCALLOP_TOKEN_EOF, 6, 7 }
+	);
+}
+
+void test_close_square_brackets()
+{
+	static const char script[] = "] ]a]]💩];]\"]\"]']'";
+	expect(script,
+		{ SCALLOP_TOKEN_CLOSE_SQUARE_BRACKET, 0, 1 },
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 1, 2 },
+		{ SCALLOP_TOKEN_CLOSE_SQUARE_BRACKET, 2, 3 },
+		{ SCALLOP_TOKEN_WORD, 3, 4 },
+		{ SCALLOP_TOKEN_CLOSE_SQUARE_BRACKET, 4, 5 },
+		{ SCALLOP_TOKEN_CLOSE_SQUARE_BRACKET, 5, 6 },
+		{ SCALLOP_TOKEN_WORD, 6, 10 },
+		{ SCALLOP_TOKEN_CLOSE_SQUARE_BRACKET, 10, 11 },
+		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 11, 12 },
+		{ SCALLOP_TOKEN_CLOSE_SQUARE_BRACKET, 12, 13 },
+		{ SCALLOP_TOKEN_WORD, 13, 16 },
+		{ SCALLOP_TOKEN_CLOSE_SQUARE_BRACKET, 16, 17 },
+		{ SCALLOP_TOKEN_EOF, 6, 7 }
+	);
+}
+
+void test_escape_unquoted()
+{
+	static const char script[] = "\\\"a\\a \\z;\\b";
+	expect(script,
+		{ SCALLOP_TOKEN_WORD, 0, 5 },
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 5, 6 },
+		{ SCALLOP_TOKEN_WORD, 6, 8 },
+		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 8, 9 },
+		{ SCALLOP_TOKEN_WORD, 9, 11 },
+		{ SCALLOP_TOKEN_EOF, 11, 12 }
+	);
+}
+
 int main()
 {
 	test_word();
@@ -171,6 +264,10 @@ int main()
 	test_statements();
 	test_quoted_strings();
 	test_double_quoted_strings();
-//	test_open_curly_bracket();
+	test_open_curly_brackets();
+	test_close_curly_brackets();
+	test_open_square_brackets();
+	test_close_square_brackets();
+	test_escape_unquoted();
 	return EXIT_SUCCESS;
 }
