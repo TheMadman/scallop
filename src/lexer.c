@@ -272,6 +272,14 @@ struct scallop_parse_token lex_escape_word(
 	csalt_store *,
 	struct scallop_parse_token
 );
+struct scallop_parse_token lex_escape_quoted_string(
+	csalt_store *,
+	struct scallop_parse_token
+);
+struct scallop_parse_token lex_escape_double_quoted_string(
+	csalt_store *,
+	struct scallop_parse_token
+);
 struct scallop_parse_token lex_begin(
 	csalt_store *,
 	struct scallop_parse_token
@@ -399,6 +407,7 @@ struct scallop_parse_token lex_quoted_string(
 		{ CHAR_CLOSE_CURLY_BRACKET, lex_quoted_string },
 		{ CHAR_OPEN_SQUARE_BRACKET, lex_quoted_string },
 		{ CHAR_CLOSE_SQUARE_BRACKET, lex_quoted_string },
+		{ CHAR_BACKSLASH, lex_escape_quoted_string },
 		{ CHAR_QUOTE, lex_end_quoted_string },
 	};
 
@@ -491,6 +500,7 @@ struct scallop_parse_token lex_double_quoted_string(
 		{ CHAR_CLOSE_CURLY_BRACKET, lex_double_quoted_string },
 		{ CHAR_OPEN_SQUARE_BRACKET, lex_double_quoted_string },
 		{ CHAR_CLOSE_SQUARE_BRACKET, lex_double_quoted_string },
+		{ CHAR_BACKSLASH, lex_escape_double_quoted_string },
 		{ CHAR_NULL, lex_end },
 	};
 
@@ -633,27 +643,26 @@ struct scallop_parse_token lex_escape_word(
 )
 {
 	const struct next_char escaped_char = next_char(store, token);
-	const struct next_char current_char = next_char(store, escaped_char.token);
-	const enum CHAR_TYPE input = current_char.type;
-	token = current_char.token;
-	token.token = SCALLOP_TOKEN_WORD;
-	static const struct state_transition_row transitions[] = {
-		{ CHAR_ASCII_PRINTABLE, lex_word },
-		{ CHAR_QUOTE, lex_quoted_string },
-		{ CHAR_DOUBLE_QUOTE, lex_double_quoted_string },
-		{ CHAR_UTF8_START, lex_utf8_start },
-		{ CHAR_OPEN_CURLY_BRACKET, lex_end },
-		{ CHAR_CLOSE_CURLY_BRACKET, lex_end },
-		{ CHAR_OPEN_SQUARE_BRACKET, lex_end },
-		{ CHAR_CLOSE_SQUARE_BRACKET, lex_end },
-		{ CHAR_WORD_SEPARATOR, lex_end },
-		{ CHAR_STATEMENT_SEPARATOR, lex_end },
-		{ CHAR_NULL, lex_end },
-	};
-
-	return transition_state(transitions, input)(store, token);
+	return lex_word(store, escaped_char.token);
 }
 
+struct scallop_parse_token lex_escape_quoted_string(
+	csalt_store *store,
+	struct scallop_parse_token token
+)
+{
+	const struct next_char escaped_char = next_char(store, token);
+	return lex_quoted_string(store, escaped_char.token);
+}
+
+struct scallop_parse_token lex_escape_double_quoted_string(
+	csalt_store *store,
+	struct scallop_parse_token token
+)
+{
+	const struct next_char escaped_char = next_char(store, token);
+	return lex_double_quoted_string(store, escaped_char.token);
+}
 
 static struct scallop_parse_token token_rewind(
 	csalt_store *store,
