@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#include <csalt/stores.h>
+
 int receive_split_for_set_(csalt_store *store, void *value)
 {
 	struct {

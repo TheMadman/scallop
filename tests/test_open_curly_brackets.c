@@ -1,0 +1,24 @@
+#include "test_macros.h"
+
+#include <csalt/stores.h>
+
+int main()
+{
+	static const char script[] = "{ {a{{💩{;{\"{\"{'{'";
+	expect(script,
+		{ SCALLOP_TOKEN_OPEN_CURLY_BRACKET, 0, 1 },
+		{ SCALLOP_TOKEN_WORD_SEPARATOR, 1, 2 },
+		{ SCALLOP_TOKEN_OPEN_CURLY_BRACKET, 2, 3 },
+		{ SCALLOP_TOKEN_WORD, 3, 4 },
+		{ SCALLOP_TOKEN_OPEN_CURLY_BRACKET, 4, 5 },
+		{ SCALLOP_TOKEN_OPEN_CURLY_BRACKET, 5, 6 },
+		{ SCALLOP_TOKEN_WORD, 6, 10 },
+		{ SCALLOP_TOKEN_OPEN_CURLY_BRACKET, 10, 11 },
+		{ SCALLOP_TOKEN_STATEMENT_SEPARATOR, 11, 12 },
+		{ SCALLOP_TOKEN_OPEN_CURLY_BRACKET, 12, 13 },
+		{ SCALLOP_TOKEN_WORD, 13, 16 },
+		{ SCALLOP_TOKEN_OPEN_CURLY_BRACKET, 16, 17 },
+		{ SCALLOP_TOKEN_EOF, 6, 7 }
+	);
+}
+
